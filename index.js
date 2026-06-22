@@ -85,7 +85,7 @@ function getAvailableSlots() {
 async function createCalendarEvent(name, topic, slotLabel, slotIso, slotIsoEnd) {
   try {
     await groq.chat.completions.create({
-      model: "llama3-70b-8192",
+      model: "llama-3.3-70b-versatile",
       max_tokens: 500,
       messages: [
       { role: "system", content: "Agenda el evento en Google Calendar exactamente como se indica. No respondas nada más." },
@@ -192,7 +192,7 @@ async function handleMessage(from, body) {
   if (session.history.length > 10) session.history = session.history.slice(-10);
 
   const response = await groq.chat.completions.create({
-    model: "llama3-70b-8192",
+    model: "llama-3.3-70b-versatile",
     max_tokens: 300,
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
