@@ -5,13 +5,13 @@
 
 const express = require('express');
 const { MessagingResponse } = require('twilio').twiml;
-const Anthropic = require('@anthropic-ai/sdk');
+const Groq = require("groq-sdk");
 
 const app = express();
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // ── Historial en memoria (por número de teléfono) ──────────
 const sessions = {};
@@ -84,11 +84,12 @@ function getAvailableSlots() {
 // ── Agendar en Google Calendar vía Claude + MCP ─────────────
 async function createCalendarEvent(name, topic, slotLabel, slotIso, slotIsoEnd) {
   try {
-    await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
+    await groq.chat.completions.create({
+      model: "llama3-70b-8192",
       max_tokens: 500,
-      system: 'Agenda el evento en Google Calendar exactamente como se indica. No respondas nada más.',
-      messages: [{
+      messages: [
+      { role: "system", content: "Agenda el evento en Google Calendar exactamente como se indica. No respondas nada más." },
+      {
         role: 'user',
         content: `Crea este evento en Google Calendar:
 Título: "Consulta jurídica - ${name}"
@@ -190,14 +191,16 @@ async function handleMessage(from, body) {
   session.history.push({ role: 'user', content: text });
   if (session.history.length > 10) session.history = session.history.slice(-10);
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6',
+  const response = await groq.chat.completions.create({
+    model: "llama3-70b-8192",
     max_tokens: 300,
-    system: SYSTEM_PROMPT,
-    messages: session.history
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      ...session.history
+    ]
   });
 
-  const reply = response.content[0]?.text || 'Gracias por contactarnos. ¿Te gustaría agendar una cita o que te llamemos?';
+  const reply = response.choices[0]?.message?.content || 'Gracias por contactarnos. ¿Te gustaría agendar una cita o que te llamemos?';
   session.history.push({ role: 'assistant', content: reply });
 
   // Detectar si la IA sugiere agendar o callback
